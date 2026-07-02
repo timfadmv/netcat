@@ -1,4 +1,4 @@
-name: OWASP ZAP Scan
+name: OWASP ZAP
 on:
   push:
     branches: [ main ]
