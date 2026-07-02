@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.0
 
       - name: Start app with docker compose
         run: docker compose up -d --build
@@ -44,7 +44,7 @@ jobs:
 
       - name: Upload ZAP report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: zap-report
           path: report_html.html
