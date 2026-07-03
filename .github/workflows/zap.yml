@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v8ade135a41bc03ea155e62e844d188df1ea18608
 
       - name: Start app with docker compose
         run: docker compose up -d --build
