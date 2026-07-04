@@ -45,30 +45,44 @@ jobs:
       - name: Build Semgrep summary
         if: always()
         run: |
-          python3 -c "
-            import json, os
-            path = 'semgrep.sarif'
-            lines = ['## 🔎 Semgrep SAST results\n']
-            if not os.path.exists(path):
-                lines.append('⚠️ The report has not been generated (semgrep.sarif Not found)')
-            else:
-                data = json.load(open(path))
-                results = (data.get('runs') or [{}])[0].get('results', [])
-                if not results:
-                    lines.append('✅ No issues found')
-                else:
-                    lines.append(f'Found **{len(results)}** problems:\n')
-                    for r in results[:20]:
-                        msg = r.get('message', {}).get('text', '')
-                        loc = r['locations'][0]['physicalLocation']
-                        f_ = loc['artifactLocation']['uri']
-                        ln = loc['region']['startLine']
-                        rule = r.get('ruleId', 'unknown')
-                        lines.append(f'- **{f_}:{ln}** [\`{rule}\`] — {msg}')
-                    if len(results) > 20:
-                        lines.append(f'\n_... and also {len(results) - 20}, See the tab Security_')
-            open('semgrep-summary.md', 'w').write(chr(10).join(lines))
-            "
+          cat > semgrep_summary.py << 'PYEOF'
+          import json
+          import os
+
+          def build_summary():
+              path = "semgrep.sarif"
+              lines = ["## Semgrep SAST results\n"]
+
+              if not os.path.exists(path):
+                  lines.append("The report was not generated (semgrep.sarif not found)")
+                  return lines
+
+              data = json.load(open(path))
+              results = (data.get("runs") or [{}])[0].get("results", [])
+              if not results:
+                  lines.append("No issues found")
+              else:
+                  lines.append(f"**{len(results)}** issues found:\n")
+                  for r in results[:20]:
+                      msg = r.get("message", {}).get("text", "")
+                      loc = r["locations"][0]["physicalLocation"]
+                      file_ = loc["artifactLocation"]["uri"]
+                      line_no = loc["region"]["startLine"]
+                      rule = r.get("ruleId", "unknown")
+                      lines.append(f"- **{file_}:{line_no}** [`{rule}`] - {msg}")
+                  if len(results) > 20:
+                      lines.append(f"\n... and also{len(results) - 20}, see the tab Security")
+              return lines
+
+          try:
+              lines = build_summary()
+          except Exception as e:
+              lines = ["## Semgrep SAST results\n", f"Unable to parse the report: {e}"]
+
+          with open("semgrep-summary.md", "w") as out:
+              out.write(chr(10).join(lines))
+          PYEOF
+          python3 semgrep_summary.py
 
       - name: Comment on PR with results
         if: always() && github.event_name == 'pull_request'
