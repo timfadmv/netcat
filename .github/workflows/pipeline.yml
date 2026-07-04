@@ -42,31 +42,50 @@ jobs:
           category: semgrep
           wait-for-processing: true
 
-      - name: Comment on PR with results
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
-        with:
-          script: |
-            const fs = require('fs');
-            const semgrepOutput = fs.existsSync('semgrep.sarif')
-              ? JSON.parse(fs.readFileSync('semgrep.sarif', 'utf8'))
-              : { runs: [] };
+      - name: Build Semgrep summary
+        if: always()
+        run: |
+          python3 -c "
+            import json, os
+            path = 'semgrep.sarif'
+            lines = ['## 🔎 Semgrep SAST results\n']
+            if not os.path.exists(path):
+                lines.append('⚠️ The report has not been generated (semgrep.sarif Not found)')
+            else:
+                data = json.load(open(path))
+                results = (data.get('runs') or [{}])[0].get('results', [])
+                if not results:
+                    lines.append('✅ No issues found')
+                else:
+                    lines.append(f'Found **{len(results)}** problems:\n')
+                    for r in results[:20]:
+                        msg = r.get('message', {}).get('text', '')
+                        loc = r['locations'][0]['physicalLocation']
+                        f_ = loc['artifactLocation']['uri']
+                        ln = loc['region']['startLine']
+                        rule = r.get('ruleId', 'unknown')
+                        lines.append(f'- **{f_}:{ln}** [\`{rule}\`] — {msg}')
+                    if len(results) > 20:
+                        lines.append(f'\n_... and also {len(results) - 20}, See the tab Security_')
+            open('semgrep-summary.md', 'w').write(chr(10).join(lines))
+            "
 
-            const results = semgrepOutput.runs[0]?.results || [];
-            if (results.length === 0) {
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: '✅ Semgrep scan passed with no findings!'
-              });
-            }
+      - name: Comment on PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0
+        with:
+          header: semgrep
+          path: semgrep-summary.md
 
   sca:
     name: SCA - Trivy Image Scan
     runs-on: ubuntu-24.04
     needs: sast
     if: always() # will run even if sast found problems (not just when it succeeds)
+
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -76,14 +95,38 @@ jobs:
         run: docker build -t netcat/netcat:${{ github.sha }} .
 
       - name: Run Trivy vulnerability scanner
+        id: trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        continue-on-error: true
         with:
           image-ref: 'netcat/netcat:${{ github.sha }}'
           format: 'table'
+          output: 'trivy-report.txt'
           exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+
+      - name: Build Trivy summary
+        if: always()
+        run: |
+          echo "## 📦 Trivy SCA results" > trivy-summary.md
+          echo '```' >> trivy-summary.md
+          cat trivy-report.txt >> trivy-summary.md 2>/dev/null || echo "Report not found" >> trivy-summary.md
+          echo '```' >> trivy-summary.md
+
+      - name: Comment on PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0
+        with:
+          header: trivy
+          path: trivy-summary.md
+
+      - name: Fail job if vulnerabilities found
+        if: steps.trivy.outcome == 'failure'
+        run: |
+          echo "Trivy discovered CRITICAL/HIGH vulnerabilities—see the comment in the PR"
+          exit 1
 
   dast:
     name: DAST - ZAP Scan
@@ -95,6 +138,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -123,6 +167,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           docker_name: 'ghcr.io/zaproxy/zaproxy:stable'
           fail_action: false
+
+      - name: Comment on PR with ZAP results
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0
+        with:
+          header: zap
+          path: report_md.md
 
       - name: Upload ZAP report
         if: always()
