@@ -1,6 +1,13 @@
 # Everything in this repository is pinned (action SHAs, image digests, hashed
-# requirements). Dependabot opens a pull request for each new version, so the CI
-# runs before a pin is moved.
+# requirements, locked Python packages). Dependabot opens a pull request for each
+# new version, so the CI runs before a pin is moved.
+#
+# Minor and patch updates are grouped into one pull request per ecosystem; major
+# updates stay separate so they get a proper review.
+#
+# Not covered by Dependabot, update by hand (check about once a quarter):
+#   - the Trivy version in .github/workflows/pipeline.yml (`version:` of trivy-action)
+#   - the ZAP image digest in .github/workflows/pipeline.yml (`docker_name:`)
 version: 2
 updates:
   # actions/*, github/codeql-action, aquasecurity/trivy-action, zaproxy/action-baseline
@@ -10,6 +17,9 @@ updates:
       interval: weekly
     commit-message:
       prefix: "ci(deps)"
+    groups:
+      github-actions:
+        update-types: [minor, patch]
 
   # python and uv base images in the dockerfile (tag + digest)
   - package-ecosystem: docker
@@ -18,18 +28,32 @@ updates:
       interval: weekly
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      docker-images:
+        update-types: [minor, patch]
 
-  # application dependencies in pyproject.toml / uv.lock
+  # application and dev dependencies in pyproject.toml / uv.lock (single source of versions)
   - package-ecosystem: uv
     directory: /
     schedule:
       interval: weekly
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      python-dependencies:
+        update-types: [minor, patch]
 
   # Semgrep used by the SAST job (ci/requirements-semgrep.txt)
   - package-ecosystem: pip
     directory: /ci
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci(deps)"
+
+  # hooks in .pre-commit-config.yaml (gitleaks)
+  - package-ecosystem: pre-commit
+    directory: /
     schedule:
       interval: weekly
     commit-message:
