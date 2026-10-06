@@ -1,46 +1,59 @@
 # Netcat Web
 
-A modern web-based Netcat alternative built with Python and Flask.
+A small web-based Netcat alternative built with Python and Flask: open TCP connections, listen for incoming ones and scan ports from the browser.
 
-This project provides a simple browser interface for TCP connections, port scanning, and socket testing.
+> **Security notice.** This is a learning project with **no authentication**. It can open connections and scan ports from the machine it runs on, so run it only on a trusted local machine and never expose it to the internet or an untrusted network.
 
----
+## Features
 
-test
+- **TCP Connect** – connect to a remote host and send messages
+- **TCP Listen** – wait for one incoming connection on a local port (`127.0.0.1`) and send messages
+- **Port Scan** – check which ports are open, e.g. `20-25,80,443`
+- REST API under `/api/*` and a simple web UI
 
-## ✨ Features
+Not implemented yet: receiving data from the remote side, UDP, IPv6.
 
-- TCP client (connect to remote hosts)
-- TCP server (listen for connections)
-- Interactive send/receive sessions
-- Port scanner
-- REST API backend
-- Simple web UI
+## Tech stack
 
----
+Python 3.11+, Flask, plain JavaScript, [uv](https://docs.astral.sh/uv/), Docker (optional).
 
-## 📦 Tech Stack
-
-- Python 3.11+
-- Flask
-- Socket programming
-- uv (dependency manager)
-- Docker (optional)
-
----
-
-## 🚀 Quick Start (Recommended — uv)
-
-### 1. Install uv
+## Quick start
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-or
-
-brew install uv
-
-### 2. Clone project
-
-git clone https://github.com/osfadsec/netcat.git
+git clone https://github.com/timfadmv/netcat.git
 cd netcat
+uv sync
+uv run python app.py
+```
+
+Open http://127.0.0.1:5000.
+
+Without uv, use `./run.sh` (macOS/Linux) or `run.bat` (Windows).
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+## API
+
+All endpoints accept and return JSON.
+
+| Method | Endpoint       | Body                                   |
+|--------|----------------|----------------------------------------|
+| POST   | `/api/connect` | `host`, `port`, `timeout`              |
+| POST   | `/api/listen`  | `port`, `timeout`                      |
+| POST   | `/api/scan`    | `host`, `ports`, `timeout`             |
+| POST   | `/api/send`    | `connection_id`, `message`             |
+| POST   | `/api/close`   | `connection_id`                        |
+
+## CI / security checks
+
+GitHub Actions runs a single pipeline on every push and pull request to `main`:
+
+- **SAST** – Semgrep
+- **SCA** – Trivy image scan
+- **DAST** – OWASP ZAP baseline scan
+
+Secrets are checked locally with [gitleaks](https://github.com/gitleaks/gitleaks) via pre-commit (`pre-commit install`).
