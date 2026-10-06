@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # Netcat Quick Start Script
+# Installs the locked dependencies (uv.lock) with uv and starts the application.
+
+set -euo pipefail
+cd "$(dirname "$0")"
 
 echo ""
 echo "======================================"
@@ -8,34 +12,17 @@ echo "      Netcat - Network Utility"
 echo "======================================"
 echo ""
 
-# Check if Python is installed
-if ! command -v python3 &> /dev/null; then
-    echo "Python 3 is not installed. Please install Python 3.7 or higher."
+# uv installs the right Python version and the exact versions from uv.lock
+if ! command -v uv &> /dev/null; then
+    echo "uv is not installed. See https://docs.astral.sh/uv/ (for example: brew install uv)"
     exit 1
 fi
 
-echo "Python found: $(python3 --version)"
+echo "uv found: $(uv --version)"
 echo ""
 
-# Check if virtual environment exists
-if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv venv
-    echo "Virtual environment created"
-else
-    echo "Virtual environment already exists"
-fi
-
-echo ""
-echo "Activating virtual environment..."
-source venv/bin/activate
-
-echo "Virtual environment activated"
-echo ""
-
-# Install dependencies
-echo "Installing dependencies..."
-pip install -q -r requirements.txt
+echo "Installing dependencies from uv.lock..."
+uv sync --frozen --no-dev
 echo "Dependencies installed"
 
 echo ""
@@ -49,4 +36,4 @@ echo "Press Ctrl+C to stop the server"
 echo ""
 
 # Run the application
-python app.py
+exec uv run --frozen --no-dev python app.py
