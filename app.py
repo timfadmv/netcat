@@ -1,9 +1,10 @@
 """
 Main Flask application for Netcat web interface
 """
+import os
+
 from flask import Flask, render_template, request, jsonify
 from netcat_core import NetcatCore
-import json
 
 app = Flask(__name__)
 netcat = NetcatCore()
@@ -138,5 +139,35 @@ def close_connection():
     except Exception as e:
         return jsonify({'error': f'Close failed: {str(e)}'}), 500
 
+LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
+
+
+def get_server_config(env=None):
+    """
+    Read host, port and debug flag for the development server from the environment.
+
+    Defaults are safe: loopback only, debugger off. The Werkzeug debugger allows code
+    execution, so it is refused on any interface other than loopback.
+    """
+    env = os.environ if env is None else env
+
+    host = env.get('NETCAT_HOST', '127.0.0.1')
+
+    try:
+        port = int(env.get('NETCAT_PORT', '5000'))
+    except ValueError:
+        raise SystemExit('NETCAT_PORT must be a number')
+    if not 1 <= port <= 65535:
+        raise SystemExit('NETCAT_PORT must be between 1 and 65535')
+
+    debug = env.get('NETCAT_DEBUG', '').lower() in ('1', 'true', 'yes')
+    if debug and host not in LOOPBACK_HOSTS:
+        raise SystemExit('Refusing to run the debugger on a non-loopback interface')
+
+    return host, port, debug
+
+
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Development server only; the Docker image runs the app with gunicorn.
+    host, port, debug = get_server_config()
+    app.run(host=host, port=port, debug=debug)

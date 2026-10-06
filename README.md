@@ -32,11 +32,25 @@ Open http://127.0.0.1:5000.
 
 Dependencies are defined in `pyproject.toml` and locked in `uv.lock`, which is the only source of pinned versions (also used by the Docker image).
 
+### Configuration
+
+The development server (`python app.py`) is configured with environment variables. The defaults are safe: loopback only, debugger off.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NETCAT_HOST` | `127.0.0.1` | Interface to listen on |
+| `NETCAT_PORT` | `5000` | Port |
+| `NETCAT_DEBUG` | off | `1` enables the Flask debugger; refused unless the host is a loopback address |
+
 ### Docker
 
 ```bash
 docker compose up --build
 ```
+
+The container runs gunicorn (one worker, eight threads) as an unprivileged user with a read-only file system and no extra capabilities. The port is published on `127.0.0.1` only. The open connections are kept in the memory of the process, which is why there is a single worker.
+
+TCP Listen only accepts connections from inside the container (it binds to `127.0.0.1` there), so use it when running the app locally rather than in Docker.
 
 ## API
 
