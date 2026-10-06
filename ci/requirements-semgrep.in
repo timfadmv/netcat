@@ -1,0 +1,7 @@
+# Semgrep for the SAST job. Regenerate the hashed lock file after changing this file:
+#
+#   uv pip compile ci/requirements-semgrep.in --universal --generate-hashes \
+#       --python-version 3.12 -o ci/requirements-semgrep.txt
+#
+# The workflow installs it with `pip install --require-hashes`.
+semgrep==1.179.0
