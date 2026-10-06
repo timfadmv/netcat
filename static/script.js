@@ -58,17 +58,22 @@ function showConnectSession(connectionData) {
     sessionDiv.innerHTML = `
         <div class="session-header">
             Active Connection
-            <button class="btn btn-danger btn-small" onclick="closeConnectSession()">Close</button>
+            <button class="btn btn-danger btn-small">Close</button>
         </div>
         <div class="session-info">
             <strong>Host:</strong> ${connectionData.host}:${connectionData.port}
         </div>
         <div class="session-input">
-            <input type="text" id="connect-message" placeholder="Type message and press Enter..." onkeypress="handleConnectKeypress(event)">
-            <button class="btn btn-primary" onclick="sendConnectData()">Send</button>
+            <input type="text" id="connect-message" placeholder="Type message and press Enter...">
+            <button class="btn btn-primary">Send</button>
         </div>
-        <div id="connect-output" style="margin-top: 15px; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 4px; min-height: 50px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em;"></div>
+        <div id="connect-output" class="session-output"></div>
     `;
+
+    // Inline handlers are blocked by the Content-Security-Policy, so attach them here
+    sessionDiv.querySelector('.btn-danger').addEventListener('click', closeConnectSession);
+    sessionDiv.querySelector('#connect-message').addEventListener('keypress', handleConnectKeypress);
+    sessionDiv.querySelector('.btn-primary').addEventListener('click', sendConnectData);
 }
 
 function handleConnectKeypress(event) {
@@ -84,7 +89,7 @@ async function sendConnectData() {
     if (!message) return;
 
     const output = document.getElementById('connect-output');
-    output.innerHTML += `<div><strong style="color: #3498db;">→</strong> ${escapeHtml(message)}</div>`;
+    output.innerHTML += `<div><strong class="output-sent">→</strong> ${escapeHtml(message)}</div>`;
     output.scrollTop = output.scrollHeight;
 
     try {
@@ -99,11 +104,11 @@ async function sendConnectData() {
         if (data.success) {
             input.value = '';
         } else {
-            output.innerHTML += `<div style="color: #e74c3c;"><strong>Error:</strong> ${data.error}</div>`;
+            output.innerHTML += `<div class="output-error"><strong>Error:</strong> ${data.error}</div>`;
             output.scrollTop = output.scrollHeight;
         }
     } catch (error) {
-        output.innerHTML += `<div style="color: #e74c3c;"><strong>Error:</strong> ${error.message}</div>`;
+        output.innerHTML += `<div class="output-error"><strong>Error:</strong> ${error.message}</div>`;
         output.scrollTop = output.scrollHeight;
     }
 }
@@ -164,17 +169,22 @@ function showListenSession(connectionData) {
     sessionDiv.innerHTML = `
         <div class="session-header">
             Active Connection
-            <button class="btn btn-danger btn-small" onclick="closeListenSession()">Close</button>
+            <button class="btn btn-danger btn-small">Close</button>
         </div>
         <div class="session-info">
             <strong>Remote Host:</strong> ${connectionData.remote_host}:${connectionData.remote_port}
         </div>
         <div class="session-input">
-            <input type="text" id="listen-message" placeholder="Type message and press Enter..." onkeypress="handleListenKeypress(event)">
-            <button class="btn btn-primary" onclick="sendListenData()">Send</button>
+            <input type="text" id="listen-message" placeholder="Type message and press Enter...">
+            <button class="btn btn-primary">Send</button>
         </div>
-        <div id="listen-output" style="margin-top: 15px; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 4px; min-height: 50px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em;"></div>
+        <div id="listen-output" class="session-output"></div>
     `;
+
+    // Inline handlers are blocked by the Content-Security-Policy, so attach them here
+    sessionDiv.querySelector('.btn-danger').addEventListener('click', closeListenSession);
+    sessionDiv.querySelector('#listen-message').addEventListener('keypress', handleListenKeypress);
+    sessionDiv.querySelector('.btn-primary').addEventListener('click', sendListenData);
 }
 
 function handleListenKeypress(event) {
@@ -190,7 +200,7 @@ async function sendListenData() {
     if (!message) return;
 
     const output = document.getElementById('listen-output');
-    output.innerHTML += `<div><strong style="color: #3498db;">→</strong> ${escapeHtml(message)}</div>`;
+    output.innerHTML += `<div><strong class="output-sent">→</strong> ${escapeHtml(message)}</div>`;
     output.scrollTop = output.scrollHeight;
 
     try {
@@ -205,11 +215,11 @@ async function sendListenData() {
         if (data.success) {
             input.value = '';
         } else {
-            output.innerHTML += `<div style="color: #e74c3c;"><strong>Error:</strong> ${data.error}</div>`;
+            output.innerHTML += `<div class="output-error"><strong>Error:</strong> ${data.error}</div>`;
             output.scrollTop = output.scrollHeight;
         }
     } catch (error) {
-        output.innerHTML += `<div style="color: #e74c3c;"><strong>Error:</strong> ${error.message}</div>`;
+        output.innerHTML += `<div class="output-error"><strong>Error:</strong> ${error.message}</div>`;
         output.scrollTop = output.scrollHeight;
     }
 }
