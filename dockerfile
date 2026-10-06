@@ -22,6 +22,10 @@ COPY app.py netcat_core.py ./
 COPY templates ./templates
 COPY static ./static
 
+# pip is not needed at runtime; remove it to shrink the attack surface
+# (its vendored msgpack, urllib3 and setuptools are flagged by Trivy)
+RUN python -m pip uninstall -y pip
+
 ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 5000
