@@ -31,6 +31,15 @@ RUN python -m pip uninstall -y pip
 
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Run as an unprivileged user instead of root
+RUN adduser -D -H -u 10001 app
+USER app
+
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=2)"
+
+# One worker process with threads: the open connections live in the memory of the
+# process, so several worker processes would not see each other's connections.
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "8", "app:app"]
