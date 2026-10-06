@@ -1,0 +1,6 @@
+2	IGNORE	Private IP Disclosure: false positive, the host input placeholder in index.html shows an example address (192.168.1.1)
+10027	IGNORE	Suspicious Comments: reviewed, script.js comments are plain descriptions with no sensitive information
+10049	IGNORE	Storable and Cacheable Content: only public static content; /api/* responses are sent with Cache-Control: no-store
+10109	IGNORE	Modern Web Application: informational only
+90005	IGNORE	Sec-Fetch-* headers missing: informational, concerns the scanner's own requests, not the server
+10036	WARN	Server header leaks version: tracked, to be fixed when the dev server is replaced by a production WSGI server
