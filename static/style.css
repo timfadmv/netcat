@@ -445,3 +445,25 @@ form {
         flex: 0 0 calc(100% - 0px);
     }
 }
+
+/* Session output (moved from inline styles so the CSP can forbid them) */
+.session-output {
+    margin-top: 15px;
+    padding: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    min-height: 50px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.output-sent {
+    color: #3498db;
+}
+
+.output-error {
+    color: #e74c3c;
+}

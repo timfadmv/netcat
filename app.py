@@ -8,6 +8,44 @@ import json
 app = Flask(__name__)
 netcat = NetcatCore()
 
+# The frontend only loads its own script and stylesheet and talks to its own API.
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "img-src 'self'",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+
+SECURITY_HEADERS = {
+    'Content-Security-Policy': CONTENT_SECURITY_POLICY,
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Cross-Origin-Embedder-Policy': 'require-corp',
+    'Cross-Origin-Resource-Policy': 'same-origin',
+}
+
+
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to every response, including errors and static files"""
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+
+    # API responses carry connection details and must not be stored by caches
+    if request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store'
+
+    return response
+
+
 @app.route('/')
 def index():
     """Render the main web interface"""
