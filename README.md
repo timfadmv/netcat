@@ -28,7 +28,9 @@ uv run python app.py
 
 Open http://127.0.0.1:5000.
 
-Without uv, use `./run.sh` (macOS/Linux) or `run.bat` (Windows).
+`./run.sh` (macOS/Linux) and `run.bat` (Windows) do the same: they install the locked dependencies with uv and start the app.
+
+Dependencies are defined in `pyproject.toml` and locked in `uv.lock`, which is the only source of pinned versions (also used by the Docker image).
 
 ### Docker
 
