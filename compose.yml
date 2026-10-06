@@ -3,5 +3,12 @@ services: # list of containers
     build: . # build an image from the Dockerfile in the current directory
     container_name: netcat # container name (useful for logs)
     ports: # port forwarding
-      - "5000:5000"
+      - "127.0.0.1:5000:5000" # reachable from this machine only, not from the network
     restart: unless-stopped # automatically restart the container
+    read_only: true # the container cannot write to its own file system
+    tmpfs:
+      - /tmp # gunicorn needs a writable temporary directory
+    cap_drop:
+      - ALL # no Linux capabilities needed to serve HTTP on port 5000
+    security_opt:
+      - no-new-privileges:true # processes cannot gain more privileges

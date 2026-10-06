@@ -42,4 +42,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # One worker process with threads: the open connections live in the memory of the
 # process, so several worker processes would not see each other's connections.
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "8", "app:app"]
+# The control socket is not needed (and needs a writable home directory).
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "8", "--no-control-socket", "app:app"]
