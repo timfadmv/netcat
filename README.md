@@ -57,5 +57,6 @@ GitHub Actions runs a single pipeline on every push and pull request to `main`:
 - **SAST** – Semgrep
 - **SCA** – Trivy image scan
 - **DAST** – OWASP ZAP baseline scan
+- **Secrets** – [gitleaks](https://github.com/gitleaks/gitleaks) over the whole git history; the job fails when a secret is found
 
-Secrets are checked locally with [gitleaks](https://github.com/gitleaks/gitleaks) via pre-commit (`pre-commit install`).
+Secrets are also checked before every commit with the same gitleaks version via pre-commit (`pre-commit install`).
