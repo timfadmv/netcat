@@ -1,0 +1,36 @@
+# Everything in this repository is pinned (action SHAs, image digests, hashed
+# requirements). Dependabot opens a pull request for each new version, so the CI
+# runs before a pin is moved.
+version: 2
+updates:
+  # actions/*, github/codeql-action, aquasecurity/trivy-action, zaproxy/action-baseline
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci(deps)"
+
+  # python and uv base images in the dockerfile (tag + digest)
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+
+  # application dependencies in pyproject.toml / uv.lock
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Semgrep used by the SAST job (ci/requirements-semgrep.txt)
+  - package-ecosystem: pip
+    directory: /ci
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci(deps)"
