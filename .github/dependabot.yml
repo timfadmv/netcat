@@ -5,6 +5,17 @@
 # Minor and patch updates are grouped into one pull request per ecosystem; major
 # updates stay separate so they get a proper review.
 #
+# Cooldown: a new version is only proposed some days after its release. A
+# compromised release is usually noticed and withdrawn within days, so waiting keeps
+# it out of this repository. Dependabot applies a default cooldown of 3 days; it is
+# set explicitly here to 7 days (default-days) and, for uv and pip, to
+# 14 / 7 / 3 days for major / minor / patch releases. Security updates for known
+# vulnerabilities are not delayed by a cooldown.
+# Limit: the cooldown needs the publication date of a release. Docker registries do
+# not return it, so Dependabot reports that the cooldown "could not be applied" to
+# base images. For them the protection is the digest pin, the CI and the review of
+# every pull request.
+#
 # Not covered by Dependabot, update by hand (check about once a quarter):
 #   - the Trivy version in .github/workflows/pipeline.yml (`version:` of trivy-action)
 #   - the ZAP image digest in .github/workflows/pipeline.yml (`docker_name:`)
@@ -17,6 +28,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "ci(deps)"
     groups:
@@ -28,17 +41,30 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7 # see the limit above: not applied to Docker images in practice
     commit-message:
       prefix: "chore(deps)"
     groups:
       docker-images:
         update-types: [minor, patch]
+    ignore:
+      # A new Python minor version (3.14 -> 3.15) changes the runtime of the whole
+      # application: upgrade it by hand after the tests pass on it. Digest refreshes
+      # of the current tag and patch releases keep arriving.
+      - dependency-name: python
+        update-types: ["version-update:semver-minor"]
 
   # application and dev dependencies in pyproject.toml / uv.lock (single source of versions)
   - package-ecosystem: uv
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     commit-message:
       prefix: "chore(deps)"
     groups:
@@ -50,6 +76,11 @@ updates:
     directory: /ci
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     commit-message:
       prefix: "ci(deps)"
 
@@ -58,5 +89,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "ci(deps)"
