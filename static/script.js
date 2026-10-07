@@ -18,6 +18,56 @@ const activeSessions = {
     listen: null
 };
 
+// ============ SAFE RENDERING (F-001) ============
+// Everything shown on the page is built from DOM nodes. append() turns a string into a text node,
+// so host names and messages from the API are never parsed as HTML. Do not use innerHTML here:
+// tests/test_xss.py fails when it comes back.
+function node(tag, className, ...children) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    element.append(...children);
+    return element;
+}
+
+function showResult(container, className, ...children) {
+    container.replaceChildren(node('div', className, ...children));
+    container.classList.add('show');
+}
+
+function showError(container, message) {
+    showResult(container, 'result-error', node('strong', null, '✗ Error:'), ` ${message}`);
+}
+
+function appendOutput(output, className, ...children) {
+    output.append(node('div', className, ...children));
+    output.scrollTop = output.scrollHeight;
+}
+
+function showSession(sessionDiv, prefix, infoLabel, infoText, handlers) {
+    const closeButton = node('button', 'btn btn-danger btn-small', 'Close');
+    closeButton.addEventListener('click', handlers.close);
+
+    const input = node('input');
+    input.type = 'text';
+    input.id = `${prefix}-message`;
+    input.placeholder = 'Type message and press Enter...';
+    input.addEventListener('keypress', handlers.keypress);
+
+    const sendButton = node('button', 'btn btn-primary', 'Send');
+    sendButton.addEventListener('click', handlers.send);
+
+    const output = node('div', 'session-output');
+    output.id = `${prefix}-output`;
+
+    sessionDiv.replaceChildren(
+        node('div', 'session-header', 'Active Connection', closeButton),
+        node('div', 'session-info', node('strong', null, infoLabel), ` ${infoText}`),
+        node('div', 'session-input', input, sendButton),
+        output
+    );
+    sessionDiv.classList.add('show');
+}
+
 // ============ TCP CONNECT TAB ============
 document.getElementById('connect-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -27,8 +77,7 @@ document.getElementById('connect-form').addEventListener('submit', async (e) => 
     const timeout = parseInt(document.getElementById('connect-timeout').value);
 
     const resultDiv = document.getElementById('connect-result');
-    resultDiv.innerHTML = '<div class="result-info"><span class="spinner"></span> Connecting...</div>';
-    resultDiv.classList.add('show');
+    showResult(resultDiv, 'result-info', node('span', 'spinner'), ' Connecting...');
 
     try {
         const response = await fetch('/api/connect', {
@@ -41,39 +90,25 @@ document.getElementById('connect-form').addEventListener('submit', async (e) => 
 
         if (data.success) {
             activeSessions.connect = data.connection_id;
-            resultDiv.innerHTML = `<div class="result-success"><strong>✓ Connected!</strong><br>${data.message}</div>`;
+            showResult(resultDiv, 'result-success', node('strong', null, '✓ Connected!'), node('br'), data.message);
             document.getElementById('connect-form').style.display = 'none';
             showConnectSession(data);
         } else {
-            resultDiv.innerHTML = `<div class="result-error"><strong>✗ Error:</strong> ${data.error}</div>`;
+            showError(resultDiv, data.error);
         }
     } catch (error) {
-        resultDiv.innerHTML = `<div class="result-error"><strong>✗ Error:</strong> ${error.message}</div>`;
+        showError(resultDiv, error.message);
     }
 });
 
 function showConnectSession(connectionData) {
-    const sessionDiv = document.getElementById('connect-session');
-    sessionDiv.classList.add('show');
-    sessionDiv.innerHTML = `
-        <div class="session-header">
-            Active Connection
-            <button class="btn btn-danger btn-small">Close</button>
-        </div>
-        <div class="session-info">
-            <strong>Host:</strong> ${connectionData.host}:${connectionData.port}
-        </div>
-        <div class="session-input">
-            <input type="text" id="connect-message" placeholder="Type message and press Enter...">
-            <button class="btn btn-primary">Send</button>
-        </div>
-        <div id="connect-output" class="session-output"></div>
-    `;
-
-    // Inline handlers are blocked by the Content-Security-Policy, so attach them here
-    sessionDiv.querySelector('.btn-danger').addEventListener('click', closeConnectSession);
-    sessionDiv.querySelector('#connect-message').addEventListener('keypress', handleConnectKeypress);
-    sessionDiv.querySelector('.btn-primary').addEventListener('click', sendConnectData);
+    showSession(
+        document.getElementById('connect-session'),
+        'connect',
+        'Host:',
+        `${connectionData.host}:${connectionData.port}`,
+        { close: closeConnectSession, keypress: handleConnectKeypress, send: sendConnectData }
+    );
 }
 
 function handleConnectKeypress(event) {
@@ -89,8 +124,7 @@ async function sendConnectData() {
     if (!message) return;
 
     const output = document.getElementById('connect-output');
-    output.innerHTML += `<div><strong class="output-sent">→</strong> ${escapeHtml(message)}</div>`;
-    output.scrollTop = output.scrollHeight;
+    appendOutput(output, null, node('strong', 'output-sent', '→'), ` ${message}`);
 
     try {
         const response = await fetch('/api/send', {
@@ -104,12 +138,10 @@ async function sendConnectData() {
         if (data.success) {
             input.value = '';
         } else {
-            output.innerHTML += `<div class="output-error"><strong>Error:</strong> ${data.error}</div>`;
-            output.scrollTop = output.scrollHeight;
+            appendOutput(output, 'output-error', node('strong', null, 'Error:'), ` ${data.error}`);
         }
     } catch (error) {
-        output.innerHTML += `<div class="output-error"><strong>Error:</strong> ${error.message}</div>`;
-        output.scrollTop = output.scrollHeight;
+        appendOutput(output, 'output-error', node('strong', null, 'Error:'), ` ${error.message}`);
     }
 }
 
@@ -124,9 +156,9 @@ function closeConnectSession() {
 
     activeSessions.connect = null;
     document.getElementById('connect-session').classList.remove('show');
-    document.getElementById('connect-session').innerHTML = '';
+    document.getElementById('connect-session').replaceChildren();
     document.getElementById('connect-result').classList.remove('show');
-    document.getElementById('connect-result').innerHTML = '';
+    document.getElementById('connect-result').replaceChildren();
     document.getElementById('connect-form').style.display = '';
 }
 
@@ -138,8 +170,7 @@ document.getElementById('listen-form').addEventListener('submit', async (e) => {
     const timeout = parseInt(document.getElementById('listen-timeout').value);
 
     const resultDiv = document.getElementById('listen-result');
-    resultDiv.innerHTML = '<div class="result-info"><span class="spinner"></span> Listening on port ' + port + '...</div>';
-    resultDiv.classList.add('show');
+    showResult(resultDiv, 'result-info', node('span', 'spinner'), ` Listening on port ${port}...`);
 
     try {
         const response = await fetch('/api/listen', {
@@ -152,39 +183,25 @@ document.getElementById('listen-form').addEventListener('submit', async (e) => {
 
         if (data.success) {
             activeSessions.listen = data.connection_id;
-            resultDiv.innerHTML = `<div class="result-success"><strong>✓ Connection Accepted!</strong><br>${data.message}</div>`;
+            showResult(resultDiv, 'result-success', node('strong', null, '✓ Connection Accepted!'), node('br'), data.message);
             document.getElementById('listen-form').style.display = 'none';
             showListenSession(data);
         } else {
-            resultDiv.innerHTML = `<div class="result-error"><strong>✗ Error:</strong> ${data.error}</div>`;
+            showError(resultDiv, data.error);
         }
     } catch (error) {
-        resultDiv.innerHTML = `<div class="result-error"><strong>✗ Error:</strong> ${error.message}</div>`;
+        showError(resultDiv, error.message);
     }
 });
 
 function showListenSession(connectionData) {
-    const sessionDiv = document.getElementById('listen-session');
-    sessionDiv.classList.add('show');
-    sessionDiv.innerHTML = `
-        <div class="session-header">
-            Active Connection
-            <button class="btn btn-danger btn-small">Close</button>
-        </div>
-        <div class="session-info">
-            <strong>Remote Host:</strong> ${connectionData.remote_host}:${connectionData.remote_port}
-        </div>
-        <div class="session-input">
-            <input type="text" id="listen-message" placeholder="Type message and press Enter...">
-            <button class="btn btn-primary">Send</button>
-        </div>
-        <div id="listen-output" class="session-output"></div>
-    `;
-
-    // Inline handlers are blocked by the Content-Security-Policy, so attach them here
-    sessionDiv.querySelector('.btn-danger').addEventListener('click', closeListenSession);
-    sessionDiv.querySelector('#listen-message').addEventListener('keypress', handleListenKeypress);
-    sessionDiv.querySelector('.btn-primary').addEventListener('click', sendListenData);
+    showSession(
+        document.getElementById('listen-session'),
+        'listen',
+        'Remote Host:',
+        `${connectionData.remote_host}:${connectionData.remote_port}`,
+        { close: closeListenSession, keypress: handleListenKeypress, send: sendListenData }
+    );
 }
 
 function handleListenKeypress(event) {
@@ -200,8 +217,7 @@ async function sendListenData() {
     if (!message) return;
 
     const output = document.getElementById('listen-output');
-    output.innerHTML += `<div><strong class="output-sent">→</strong> ${escapeHtml(message)}</div>`;
-    output.scrollTop = output.scrollHeight;
+    appendOutput(output, null, node('strong', 'output-sent', '→'), ` ${message}`);
 
     try {
         const response = await fetch('/api/send', {
@@ -215,12 +231,10 @@ async function sendListenData() {
         if (data.success) {
             input.value = '';
         } else {
-            output.innerHTML += `<div class="output-error"><strong>Error:</strong> ${data.error}</div>`;
-            output.scrollTop = output.scrollHeight;
+            appendOutput(output, 'output-error', node('strong', null, 'Error:'), ` ${data.error}`);
         }
     } catch (error) {
-        output.innerHTML += `<div class="output-error"><strong>Error:</strong> ${error.message}</div>`;
-        output.scrollTop = output.scrollHeight;
+        appendOutput(output, 'output-error', node('strong', null, 'Error:'), ` ${error.message}`);
     }
 }
 
@@ -235,13 +249,20 @@ function closeListenSession() {
 
     activeSessions.listen = null;
     document.getElementById('listen-session').classList.remove('show');
-    document.getElementById('listen-session').innerHTML = '';
+    document.getElementById('listen-session').replaceChildren();
     document.getElementById('listen-result').classList.remove('show');
-    document.getElementById('listen-result').innerHTML = '';
+    document.getElementById('listen-result').replaceChildren();
     document.getElementById('listen-form').style.display = '';
 }
 
 // ============ PORT SCAN TAB ============
+function portList(title, className, ports) {
+    return [
+        node('strong', null, title),
+        node('div', 'port-list', ...ports.map(port => node('span', `port-tag ${className}`, String(port))))
+    ];
+}
+
 document.getElementById('scan-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -250,8 +271,7 @@ document.getElementById('scan-form').addEventListener('submit', async (e) => {
     const timeout = parseInt(document.getElementById('scan-timeout').value);
 
     const resultDiv = document.getElementById('scan-result');
-    resultDiv.innerHTML = '<div class="result-info"><span class="spinner"></span> Scanning ports on ' + host + '...</div>';
-    resultDiv.classList.add('show');
+    showResult(resultDiv, 'result-info', node('span', 'spinner'), ` Scanning ports on ${host}...`);
 
     try {
         const response = await fetch('/api/scan', {
@@ -263,43 +283,24 @@ document.getElementById('scan-form').addEventListener('submit', async (e) => {
         const data = await response.json();
 
         if (data.success) {
-            let html = `<div class="result-success"><strong>✓ Scan Complete!</strong><br>${data.scan_summary}</div>`;
-            html += '<div class="scan-results">';
+            const results = node('div', 'scan-results');
 
             if (data.open_ports.length > 0) {
-                html += '<strong>Open Ports:</strong><div class="port-list">';
-                data.open_ports.forEach(port => {
-                    html += `<span class="port-tag port-open">${port}</span>`;
-                });
-                html += '</div>';
+                results.append(...portList('Open Ports:', 'port-open', data.open_ports));
             }
 
             if (data.closed_ports.length > 0) {
-                html += '<strong>Closed Ports:</strong><div class="port-list">';
-                data.closed_ports.forEach(port => {
-                    html += `<span class="port-tag port-closed">${port}</span>`;
-                });
-                html += '</div>';
+                results.append(...portList('Closed Ports:', 'port-closed', data.closed_ports));
             }
 
-            html += '</div>';
-            resultDiv.innerHTML = html;
+            resultDiv.replaceChildren(
+                node('div', 'result-success', node('strong', null, '✓ Scan Complete!'), node('br'), data.scan_summary),
+                results
+            );
         } else {
-            resultDiv.innerHTML = `<div class="result-error"><strong>✗ Error:</strong> ${data.error}</div>`;
+            showError(resultDiv, data.error);
         }
     } catch (error) {
-        resultDiv.innerHTML = `<div class="result-error"><strong>✗ Error:</strong> ${error.message}</div>`;
+        showError(resultDiv, error.message);
     }
 });
-
-// Utility function to escape HTML special characters
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
-}
