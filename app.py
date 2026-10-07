@@ -3,7 +3,8 @@ Main Flask application for Netcat web interface
 """
 import os
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, jsonify, render_template, request
+
 from netcat_core import NetcatCore
 
 app = Flask(__name__)
@@ -156,7 +157,7 @@ def get_server_config(env=None):
     try:
         port = int(env.get('NETCAT_PORT', '5000'))
     except ValueError:
-        raise SystemExit('NETCAT_PORT must be a number')
+        raise SystemExit('NETCAT_PORT must be a number') from None
     if not 1 <= port <= 65535:
         raise SystemExit('NETCAT_PORT must be between 1 and 65535')
 

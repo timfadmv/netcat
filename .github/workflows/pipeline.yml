@@ -9,10 +9,42 @@ on:
       - main
   workflow_dispatch:
 
+# Runners are pinned to ubuntu-24.04: `ubuntu-latest` moves to a newer Ubuntu (and Python)
+# on its own schedule, which would change the environment without a commit here.
 jobs:
+  tests:
+    name: Tests - pytest and ruff
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Same uv and Python versions as the dockerfile, so the tests run on what is shipped.
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.23"
+          python-version: "3.14"
+          enable-cache: false
+
+      - name: Install the locked dependencies
+        run: uv sync --frozen
+
+      - name: Lint with ruff
+        run: uv run --frozen ruff check .
+
+      - name: Run the tests
+        run: uv run --frozen pytest
+
   secrets:
     name: Secrets - Gitleaks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
@@ -37,7 +69,7 @@ jobs:
   sast:
     name: SAST - Semgrep Scan
     if: (github.actor != 'dependabot[bot]')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
@@ -54,7 +86,6 @@ jobs:
         run: |
           pip install --require-hashes --no-deps -r ci/requirements-semgrep.txt
           semgrep ci --config=p/security-audit --config=p/owasp-top-ten --sarif --output=semgrep.sarif
-        continue-on-error: true
         env:
           SEMGREP_DISABLE_VERSION_CHECK: 'true'
 
@@ -112,7 +143,7 @@ jobs:
 
   dast:
     name: DAST - ZAP Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: sca
     if: always() # will run even if SCA detects a CRITICAL/HIGH issue (the job will fail due to an exit code of '1')
     timeout-minutes: 15

@@ -68,7 +68,8 @@ All endpoints accept and return JSON.
 
 GitHub Actions runs a single pipeline on every push and pull request to `main`:
 
-- **SAST** – Semgrep
+- **Tests** – `pytest` and `ruff` on the Python version used in the Docker image
+- **SAST** – Semgrep; findings fail the job
 - **SCA** – Trivy image scan
 - **DAST** – OWASP ZAP baseline scan
 - **Secrets** – [gitleaks](https://github.com/gitleaks/gitleaks) over the whole git history; the job fails when a secret is found
