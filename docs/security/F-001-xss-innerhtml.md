@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Reproduced |
+| Status | Fixed and verified |
 | Component | `static/script.js` (all result and session views) |
 | CWE | CWE-79 Improper Neutralization of Input During Web Page Generation |
 | Severity | Low (CVSS 3.1 base 4.2 Medium, adjusted, see Severity) |
@@ -65,6 +65,39 @@ Adjusted to **Low** for the context of this application:
 The preconditions change if the application starts to display data from a remote party (for example the
 data received on a connection): then the same flaw would be exploitable by that party.
 
-## Fix, verification and residual risk
+## Fix
 
-To be added with the fix.
+The views are built from DOM nodes instead of HTML strings (`fix(security)` commit of this finding). A
+string given to `append()` becomes a text node, so text cannot turn into markup, whatever it contains.
+This removes the cause (text parsed as HTML), not one symptom: no value needs to be escaped, so no value
+can be forgotten.
+
+- helpers `node()`, `showResult()`, `showError()`, `appendOutput()` and one `showSession()` for both the
+  connect and the listen session (it replaces two copies of an HTML template)
+- the scan result is built from nodes as well
+- `escapeHtml()` is removed
+
+## Verification
+
+| Check | Before | After |
+|---|---|---|
+| `tests/test_xss.py` | fails: 24 `innerHTML` lines, no DOM nodes | passes |
+| proof of concept in the browser: `<h1 id="pwn">` in the result box | present | **absent** |
+| proof of concept: `<img id="img1">` in the result box | present | **absent** |
+| the markup is visible as literal text | no (shown as a heading) | **yes** |
+| `onerror` handler executed | no (blocked by CSP) | no (the element is not created) |
+| connect, send, close, listen timeout, port scan | work | work |
+| text sent with markup (`hello <b id="bold">x</b>`) | shown as text | arrives unchanged at the target, shown as text |
+| whole suite and ruff | 40 passed | 48 passed, ruff clean |
+
+## Residual risk
+
+- The regression test is static: it forbids the HTML-parsing APIs but does not run the script. A new
+  sink of another kind (for example assigning a user value to a `href` or `src` attribute) would not be
+  caught by it.
+- The Content-Security-Policy stays as the second line of defence; it was not needed to stop this
+  injection any more, but it also covers mistakes in future code.
+- The API still reflects whatever host name it receives in its messages. That is harmless for a client
+  that treats it as text, and the validation of the input is a separate finding.
+- If the application starts to display data received from a remote party, it must go through the same
+  helpers.
