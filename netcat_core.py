@@ -4,7 +4,6 @@ Core netcat functionality: TCP connections, listening, and port scanning
 import socket
 import threading
 import uuid
-from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
 
@@ -13,8 +12,8 @@ class NetcatCore:
 
     def __init__(self):
         """Initialize the NetcatCore with connection tracking"""
-        self.connections: Dict[str, socket.socket] = {}
-        self.connection_data: Dict[str, str] = {}
+        self.connections: dict[str, socket.socket] = {}
+        self.connection_data: dict[str, dict] = {}
         self.lock = threading.Lock()
 
     def _generate_connection_id(self) -> str:
@@ -29,7 +28,7 @@ class NetcatCore:
         """Validate host string is not empty"""
         return bool(host and len(host.strip()) > 0)
 
-    def connect(self, host: str, port: int, timeout: int = 5) -> Dict:
+    def connect(self, host: str, port: int, timeout: int = 5) -> dict:
         """
         Establish a TCP connection to a remote host
 
@@ -73,7 +72,7 @@ class NetcatCore:
                 'port': port
             }
 
-        except socket.timeout:
+        except TimeoutError:
             return {'success': False, 'error': f'Connection timeout after {timeout}s'}
         except socket.gaierror:
             return {'success': False, 'error': f'Cannot resolve host: {host}'}
@@ -82,7 +81,7 @@ class NetcatCore:
         except Exception as e:
             return {'success': False, 'error': f'Connection error: {str(e)}'}
 
-    def listen(self, port: int, timeout: int = 30) -> Dict:
+    def listen(self, port: int, timeout: int = 30) -> dict:
         """
         Listen for incoming TCP connections on a local port
 
@@ -130,7 +129,7 @@ class NetcatCore:
                 'remote_port': client_address[1]
             }
 
-        except socket.timeout:
+        except TimeoutError:
             return {'success': False, 'error': f'No connection received within {timeout}s'}
         except PermissionError:
             return {'success': False, 'error': f'Permission denied on port {port} (may require root)'}
@@ -139,7 +138,7 @@ class NetcatCore:
         except Exception as e:
             return {'success': False, 'error': f'Listen error: {str(e)}'}
 
-    def scan_ports(self, host: str, ports: str, timeout: int = 2) -> Dict:
+    def scan_ports(self, host: str, ports: str, timeout: int = 2) -> dict:
         """
         Scan ports on a target host
 
@@ -184,7 +183,7 @@ class NetcatCore:
         except Exception as e:
             return {'success': False, 'error': f'Scan error: {str(e)}'}
 
-    def _parse_port_spec(self, spec: str) -> List[int]:
+    def _parse_port_spec(self, spec: str) -> list[int]:
         """
         Parse port specification string
 
@@ -213,7 +212,7 @@ class NetcatCore:
         except (ValueError, AttributeError):
             return []
 
-    def _scan_single_port(self, host: str, port: int, timeout: int) -> Dict:
+    def _scan_single_port(self, host: str, port: int, timeout: int) -> dict:
         """
         Scan a single port
 
@@ -239,7 +238,7 @@ class NetcatCore:
         except Exception:
             return {'port': port, 'status': 'error'}
 
-    def send_data(self, connection_id: str, message: str) -> Dict:
+    def send_data(self, connection_id: str, message: str) -> dict:
         """
         Send data through an active connection
 
@@ -269,7 +268,7 @@ class NetcatCore:
             except Exception as e:
                 return {'success': False, 'error': f'Send error: {str(e)}'}
 
-    def close_connection(self, connection_id: str) -> Dict:
+    def close_connection(self, connection_id: str) -> dict:
         """
         Close an active connection
 
