@@ -75,3 +75,17 @@ GitHub Actions runs a single pipeline on every push and pull request to `main`:
 - **Secrets** – [gitleaks](https://github.com/gitleaks/gitleaks) over the whole git history; the job fails when a secret is found
 
 Secrets are also checked before every commit with the same gitleaks version via pre-commit (`pre-commit install`).
+
+## Security work and how to read the history
+
+This is a learning project. The application contains known vulnerabilities that are found, reproduced and
+fixed one at a time, following [docs/security/PROTOCOL.md](docs/security/PROTOCOL.md). The tag
+`baseline-v0.1` marks the vulnerable state before that work started.
+
+Commits are marked by kind, so development, practice and remediation can be told apart:
+
+```bash
+git log --oneline --grep='^training'                # practice (reproductions, experiments)
+git log --oneline --grep='^fix(security)'           # vulnerability fixes
+git log --oneline --invert-grep --grep='^training'  # everything except practice
+```
