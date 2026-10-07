@@ -8,6 +8,8 @@
 # Not covered by Dependabot, update by hand (check about once a quarter):
 #   - the Trivy version in .github/workflows/pipeline.yml (`version:` of trivy-action)
 #   - the ZAP image digest in .github/workflows/pipeline.yml (`docker_name:`)
+#   - the gitleaks image digest in .github/workflows/pipeline.yml (`secrets` job); keep it
+#     at the same version as the hook in .pre-commit-config.yaml
 version: 2
 updates:
   # actions/*, github/codeql-action, aquasecurity/trivy-action, zaproxy/action-baseline
