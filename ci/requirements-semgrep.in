@@ -4,4 +4,4 @@
 #       --python-version 3.12 -o ci/requirements-semgrep.txt
 #
 # The workflow installs it with `pip install --require-hashes`.
-semgrep==1.180.0
+semgrep==1.181.0
